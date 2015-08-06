@@ -98,6 +98,9 @@
         ],
         "CocoaAsyncSocket": [
           "~>7.4"
+        ],
+        "ProxyKit/Client": [
+          "~>1.0"
         ]
       },
       "ios": {
