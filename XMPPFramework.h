@@ -48,6 +48,10 @@
 #import "XMPPPubSub.h"
 #endif
 
+#ifdef HAVE_XMPP_SUBSPEC_XEP_0077
+#import "XMPPRegistration.h"
+#endif
+
 #ifdef HAVE_XMPP_SUBSPEC_XEP_0100
 #import "XMPPTransports.h"
 #endif
