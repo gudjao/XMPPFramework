@@ -8,8 +8,13 @@
 #import "XMPPSRVResolver.h"
 #import "XMPPLogging.h"
 
+//#warning Fix "dns.h" issue without resorting to this ugly hack.
+// This is a hack to prevent OnionKit's clobbering of the actual system's <dns.h>
+//#include "/usr/include/dns.h"
+
 #include <dns_util.h>
 #include <stdlib.h>
+#import <dns_sd.h>
 
 #if ! __has_feature(objc_arc)
 #warning This file must be compiled with ARC. Use -fobjc-arc flag (or convert project to ARC).
@@ -40,6 +45,29 @@ NSString *const XMPPSRVResolverErrorDomain = @"XMPPSRVResolverErrorDomain";
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark -
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+@interface XMPPSRVResolver ()
+{
+    __unsafe_unretained id delegate;
+    dispatch_queue_t delegateQueue;
+    
+    dispatch_queue_t resolverQueue;
+    void *resolverQueueTag;
+    
+    __strong NSString *srvName;
+    NSTimeInterval timeout;
+    
+    BOOL resolveInProgress;
+    
+    NSMutableArray *results;
+    DNSServiceRef sdRef;
+    
+    int sdFd;
+    dispatch_source_t sdReadSource;
+    dispatch_source_t timeoutTimer;
+}
+
+@end
 
 @implementation XMPPSRVResolver
 

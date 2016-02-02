@@ -3,10 +3,9 @@
 #import "XMPPCustomBinding.h"
 #import "GCDAsyncProxySocket.h"
 #import "GCDMulticastDelegate.h"
+#import "CocoaAsyncSocket/GCDAsyncSocket.h"
 
-#if TARGET_OS_IPHONE
-  #import "DDXML.h"
-#endif
+@import KissXML;
 
 @class XMPPSRVResolver;
 @class XMPPParser;
