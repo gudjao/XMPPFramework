@@ -883,12 +883,16 @@ enum XMPPStreamConfig
 }
 
 - (void) setProxyHost:(NSString*)host port:(uint16_t)port version:(GCDAsyncSocketSOCKSVersion)version {
-    asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+    if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
+        asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+    }
     [(GCDAsyncProxySocket *)asyncSocket setProxyHost:host port:port version:version];
 }
 
 - (void) setProxyUsername:(NSString *)username password:(NSString*)password {
-    asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+    if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
+        asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+    }
     [(GCDAsyncProxySocket *)asyncSocket setProxyUsername:username password:password];
 }
 

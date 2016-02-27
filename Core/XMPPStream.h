@@ -372,7 +372,7 @@ extern const NSTimeInterval XMPPStreamTimeoutNone;
  * Sets SOCKS proxy host and port
 **/
 - (void) setProxyHost:(NSString*)host port:(uint16_t)port version:(GCDAsyncSocketSOCKSVersion)version;
-- (void) setProxyUsername:(NSString *)username password:(NSString*)password; // TODO
+- (void) setProxyUsername:(NSString *)username password:(NSString*)password;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Security
