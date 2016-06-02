@@ -1,10 +1,9 @@
 #import <Foundation/Foundation.h>
 #import "XMPPSASLAuthentication.h"
 #import "XMPPCustomBinding.h"
-#import "GCDAsyncProxySocket.h"
 #import "GCDMulticastDelegate.h"
 #import "CocoaAsyncSocket/GCDAsyncSocket.h"
-
+@import ProxyKit;
 @import KissXML;
 
 @class XMPPSRVResolver;
