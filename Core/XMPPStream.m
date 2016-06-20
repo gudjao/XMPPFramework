@@ -910,17 +910,32 @@ enum XMPPStreamConfig
 }
 
 - (void) setProxyHost:(NSString*)host port:(uint16_t)port version:(GCDAsyncSocketSOCKSVersion)version {
-    if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
-        asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
-    }
-    [(GCDAsyncProxySocket *)asyncSocket setProxyHost:host port:port version:version];
+    dispatch_block_t block = ^{
+        if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
+            asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+            asyncSocket.IPv4PreferredOverIPv6 = !preferIPv6;
+        }
+        [(GCDAsyncProxySocket *)asyncSocket setProxyHost:host port:port version:version];
+    };
+    
+    if (dispatch_get_specific(xmppQueueTag))
+        block();
+    else
+        dispatch_sync(xmppQueue, block);
 }
 
 - (void) setProxyUsername:(NSString *)username password:(NSString*)password {
-    if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
-        asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
-    }
-    [(GCDAsyncProxySocket *)asyncSocket setProxyUsername:username password:password];
+    dispatch_block_t block = ^{
+        if (!asyncSocket || ![asyncSocket isKindOfClass:[GCDAsyncProxySocket class]]) {
+            asyncSocket = [[GCDAsyncProxySocket alloc] initWithDelegate:self delegateQueue:xmppQueue];
+            asyncSocket.IPv4PreferredOverIPv6 = !preferIPv6;
+        }
+        [(GCDAsyncProxySocket *)asyncSocket setProxyUsername:username password:password];    };
+    
+    if (dispatch_get_specific(xmppQueueTag))
+        block();
+    else
+        dispatch_sync(xmppQueue, block);
 }
 
 
