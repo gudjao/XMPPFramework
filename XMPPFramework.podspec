@@ -13,7 +13,8 @@ Pod::Spec.new do |s|
   s.homepage = 'https://github.com/robbiehanson/XMPPFramework'
   s.author = { 'Robbie Hanson' => 'robbiehanson@deusty.com' }
 #  s.source = { :git => 'https://github.com/robbiehanson/XMPPFramework.git', :tag => s.version }
-s.source = { :git => 'https://github.com/robbiehanson/XMPPFramework.git', :branch => 'master' }
+#  s.source = { :git => 'https://github.com/robbiehanson/XMPPFramework.git', :branch => 'master' }
+s.source = { :git => 'https://github.com/gudjao/XMPPFramework.git', :branch => 'custom' }
   s.resources = [ '**/*.{xcdatamodel,xcdatamodeld}']
 
   s.description = 'XMPPFramework provides a core implementation of RFC-3920 (the xmpp standard), along with
