@@ -353,6 +353,24 @@ s.source = { :git => 'https://github.com/gudjao/XMPPFramework.git', :branch => '
     ss.prefix_header_contents = "#define HAVE_XMPP_SUBSPEC_#{name.upcase.sub('-', '_')}"
   end
 
+  s.subspec 'XEP-0033' do |ss|
+    ss.source_files = 'Extensions/XEP-0033/*.{h,m}'
+    ss.dependency 'XMPPFramework/Core'
+    ss.prefix_header_contents = "#define HAVE_XMPP_SUBSPEC_#{name.upcase.sub('-', '_')}"
+  end
+
+  s.subspec 'XEP-0095' do |ss|
+    ss.source_files = 'Extensions/XEP-0095/*.{h,m}'
+    ss.dependency 'XMPPFramework/Core'
+    ss.prefix_header_contents = "#define HAVE_XMPP_SUBSPEC_#{name.upcase.sub('-', '_')}"
+  end
+
+  s.subspec 'XEP-0096' do |ss|
+    ss.source_files = 'Extensions/XEP-0096/*.{h,m}'
+    ss.dependency 'XMPPFramework/Core'
+    ss.prefix_header_contents = "#define HAVE_XMPP_SUBSPEC_#{name.upcase.sub('-', '_')}"
+  end
+
   s.subspec 'All' do |ss|
     ss.dependency 'XMPPFramework/Core'
     ss.dependency 'XMPPFramework/BandwidthMonitor'
@@ -401,6 +419,9 @@ s.source = { :git => 'https://github.com/gudjao/XMPPFramework.git', :branch => '
     ss.dependency 'XMPPFramework/XEP-0357'
     ss.dependency 'XMPPFramework/XEP-0363'
     ss.dependency 'XMPPFramework/XEP-0313'
+    ss.dependency 'XMPPFramework/XEP-0033'
+    ss.dependency 'XMPPFramework/XEP-0095'
+    ss.dependency 'XMPPFramework/XEP-0096'
     ss.dependency 'XMPPFramework/XMPPMUCLight'
   end
 end
