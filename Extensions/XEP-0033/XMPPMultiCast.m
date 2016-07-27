@@ -14,7 +14,7 @@
 #import "XMPPLogging.h"
 #import "XMPPMessage.h"
 #import "NSXMLElement+XMPP.h"
-#import "Constants.h"
+//#import "Constants.h"
 
 #if DEBUG
     static const int xmppLogLevel = XMPP_LOG_LEVEL_WARN; // | XMPP_LOG_FLAG_TRACE;
