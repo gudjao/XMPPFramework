@@ -347,6 +347,24 @@
 	}
 }
 
+- (NSString *)fullUPS
+{
+    if (user)
+    {
+        if (resource)
+            return [NSString stringWithFormat:@"%@@%@/bentanayan", user, domain];
+        else
+            return [NSString stringWithFormat:@"%@@%@", user, domain];
+    }
+    else
+    {
+        if (resource)
+            return [NSString stringWithFormat:@"%@/bentanayan", domain];
+        else
+            return domain;
+    }
+}
+
 - (BOOL)isBare
 {
 	// From RFC 6120 Terminology:

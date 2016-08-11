@@ -48,6 +48,7 @@ typedef enum XMPPJIDCompareOptions XMPPJIDCompareOptions;
 
 - (NSString *)bare;
 - (NSString *)full;
+- (NSString *)fullUPS;
 
 - (BOOL)isBare;
 - (BOOL)isBareWithUser;

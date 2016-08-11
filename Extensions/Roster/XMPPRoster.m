@@ -680,6 +680,7 @@ enum XMPPRosterFlags
 	XMPPPresence *presence = [XMPPPresence presenceWithType:@"unsubscribed" to:[jid bareJID]];
 	[xmppStream sendElement:presence];
 }
+
 - (void)fetchRoster
 {
 	// This is a public method, so it may be invoked on any thread/queue.
