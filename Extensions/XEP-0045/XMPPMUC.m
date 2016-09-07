@@ -384,14 +384,36 @@ NSString *const XMPPMUCErrorDomain = @"XMPPMUCErrorDomain";
         roomJID = [message from];
     }
     
-    //XMPPJID * roomJID = [message from];
+    //<body rid='538900001' xmlns='http://jabber.org/protocol/httpbind' sid='3042619f05992e6c5b1b06aa777fd6205968f2dd'><message from='jhgjghjkhgkh@conference.upsexpress.com' to='jalcantara29@upsexpress.com' id='8326b620-2bcb-44fd-be25-bd7e1a7cef31' xmlns='jabber:client'><x xmlns='jabber:x:conference' jid='jhgjghjkhgkh@conference.upsexpress.com' reason='wew'/></message></body>
+    //<body rid='1679690580' xmlns='http://jabber.org/protocol/httpbind' sid='ee9f487e3c52eaed82ea82a95d3d988d05feaf4b'><message from='vtomol1234@upsexpress.com/converse.js-27405706' to='jalcantara29@upsexpress.com' id='0b62d7da-2794-4bb3-b166-6c8541a973c1' xmlns='jabber:client'><x xmlns='jabber:x:conference' jid='jhgjghjkhgkh@conference.upsexpress.com' reason='weweq'/></message></body>
+    
+    /*
+     <message xmlns="jabber:client" from="testgroup41@conference.upsexpress.com" to="gsabulaan2@upsexpress.com" type="normal">
+     <archived xmlns="urn:xmpp:mam:tmp" by="upsexpress.com" id="1472191294488544"/>
+     <stanza-id xmlns="urn:xmpp:sid:0" by="upsexpress.com" id="1472191294488544"/>
+     <x xmlns="http://jabber.org/protocol/muc#user">
+     <invite from="jalcantara29@upsexpress.com/bentanayan83774">
+     <reason/>
+     </invite>
+     </x>
+     <x xmlns="jabber:x:conference" jid="testgroup41@conference.upsexpress.com"/>
+     <body>jalcantara29@upsexpress.com/bentanayan83774 invites you to the room testgroup41@conference.upsexpress.com</body>
+     */
+    
+    //<message to="testgroup31@conference.upsexpress.com"><x xmlns="http://jabber.org/protocol/muc#user"><invite to="vtomol1234@upsexpress.com"/></x></message>
+    
+    //<message to='linfiesto@upsexpress.com' from='qweqweqwe@upsexpress.com/converse.js-119171054' id='afca7d7b-cb81-4077-a377-a40efbf588d4'><x xmlns='jabber:x:conference' jid='android@conference.upsexpress.com'/></message>
+    
+    //<message to='rnecesito@upsexpress.com' from='jalcantara30@upsexpress.com/converse.js-21561925' type='chat'><active xmlns='http://jabber.org/protocol/chatstates'/><no-store xmlns='urn:xmpp:hints'></no-store><no-permanent-store xmlns='urn:xmpp:hints'></no-permanent-store></message>
+    
+    //Message msg = smackMessage.getExtension("x", "jabber:x:conference");
     
     if (invite || directInvite)
     {
         [multicastDelegate xmppMUC:self roomJID:roomJID didReceiveInvitation:message];
     }
     else if (decline)
-    {
+    {//
         [multicastDelegate xmppMUC:self roomJID:roomJID didReceiveInvitationDecline:message];
     }
 }
