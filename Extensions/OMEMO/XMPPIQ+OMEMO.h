@@ -27,6 +27,9 @@ NS_ASSUME_NONNULL_BEGIN
 + (XMPPIQ*) omemo_iqfetchBundleForDevice:(NSNumber*)deviceId
                                      jid:(XMPPJID*)jid;
 
+/** iq stanza for feetching devices */
++ (XMPPIQ*) omemo_iqfetchDevices:(XMPPJID *)jid;
+
 
 @end
 NS_ASSUME_NONNULL_END

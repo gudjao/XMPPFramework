@@ -131,6 +131,19 @@
     return iq;
 }
 
+
++ (XMPPIQ *) omemo_iqFetchNode:(NSString *)node to:(XMPPJID *)toJID {
+    XMPPIQ *iq = [XMPPIQ iqWithType:@"get" to:toJID];
+    NSXMLElement *pubsub = [NSXMLElement elementWithName:@"pubsub" xmlns:XMLNS_PUBSUB];
+    NSXMLElement *itemsElement = [NSXMLElement elementWithName:@"items"];
+    [itemsElement addAttributeWithName:@"node" stringValue:node];
+    
+    [pubsub addChild:itemsElement];
+    [iq addChild:pubsub];
+    
+    return iq;
+}
+
 /**
  * iq stanza for fetching remote bundle
  
@@ -147,12 +160,26 @@
 + (XMPPIQ*) omemo_iqfetchBundleForDevice:(NSNumber*)deviceId
                                      jid:(XMPPJID*)jid {
     NSString *nodeName = [NSString stringWithFormat:@"%@:%@",XMLNS_OMEMO_BUNDLES,deviceId.stringValue];
-    NSXMLElement *itemsElement = [NSXMLElement elementWithName:@"items"];
-    [itemsElement addAttributeWithName:@"node" stringValue:nodeName];
-    NSXMLElement *pubsub = [NSXMLElement elementWithName:@"pubsub" xmlns:XMLNS_PUBSUB];
-    [pubsub addChild:itemsElement];
-    XMPPIQ *iq = [XMPPIQ iqWithType:@"get" to:jid];
-    return iq;
+    return [self omemo_iqFetchNode:nodeName to:jid];
+}
+
+/** 
+ * iq stanza for feetching devices
+ 
+ <iq type='get'
+    from='romeo@montague.lit'
+    to='juliet@capulet.lit'
+    id='fetch1'>
+ <pubsub xmlns='http://jabber.org/protocol/pubsub'>
+    <items node='urn:xmpp:omemo:0:bundles:31415'/>
+ </pubsub>
+ </iq>
+ 
+ */
++ (XMPPIQ*) omemo_iqfetchDevices:(XMPPJID *)jid
+{
+    NSString *nodeName = XMLNS_OMEMO_DEVICELIST;
+    return [self omemo_iqFetchNode:nodeName to:jid];
 }
 
 @end
