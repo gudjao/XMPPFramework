@@ -17,10 +17,28 @@
 
 @implementation OMEMOModule
 
+- (instancetype) initWithOMEMOStorage:(id<OMEMOStorageDelegate>)omemoStorage {
+    return [self initWithOMEMOStorage:omemoStorage dispatchQueue:NULL];
+}
+
+- (instancetype) initWithDispatchQueue:(dispatch_queue_t)queue {
+    return [self initWithOMEMOStorage:nil dispatchQueue:queue];
+}
+
+- (instancetype) initWithOMEMOStorage:(id<OMEMOStorageDelegate>)omemoStorage dispatchQueue:(nullable dispatch_queue_t)queue {
+    if (self = [super initWithDispatchQueue:queue]) {
+        if ([omemoStorage configureWithParent:self queue:moduleQueue]) {
+            _omemoStorage = omemoStorage;
+        }
+    }
+    return self;
+}
+
 - (BOOL)activate:(XMPPStream *)aXmppStream
 {
     if ([super activate:aXmppStream])
     {
+        [xmppStream autoAddDelegate:self delegateQueue:moduleQueue toModulesOfClass:[XMPPCapabilities class]];
         return YES;
     }
     
@@ -28,6 +46,7 @@
 }
 
 - (void) deactivate {
+    [xmppStream removeAutoDelegate:self delegateQueue:moduleQueue fromModulesOfClass:[XMPPCapabilities class]];
     [super deactivate];
 }
 
@@ -89,6 +108,12 @@
     }
     
     
+}
+
+#pragma mark XMPPCapabilitiesDelegate methods
+
+- (NSArray<NSString*>*) myFeaturesForXMPPCapabilities:(XMPPCapabilities *)sender {
+    return @[XMLNS_OMEMO_DEVICELIST, XMLNS_OMEMO_DEVICELIST_NOTIFY];
 }
 
 
