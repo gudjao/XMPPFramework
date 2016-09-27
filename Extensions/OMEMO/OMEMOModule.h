@@ -30,6 +30,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @property (nonatomic, strong, readonly) id<OMEMOStorageDelegate> omemoStorage;
 
+#pragma mark Init
+
 - (instancetype) initWithOMEMOStorage:(id<OMEMOStorageDelegate>)omemoStorage;
 - (instancetype) initWithOMEMOStorage:(id<OMEMOStorageDelegate>)omemoStorage dispatchQueue:(nullable dispatch_queue_t)queue NS_DESIGNATED_INITIALIZER;
 
@@ -37,6 +39,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (instancetype) init NS_UNAVAILABLE;
 /** Not available, use designated initializer */
 - (instancetype) initWithDispatchQueue:(dispatch_queue_t)queue NS_UNAVAILABLE;
+
+#pragma mark Public methods
 
 /** 
  * In order for other devices to be able to initiate a session with a given device, it first has to announce itself by adding its device ID to the devicelist PEP node.
@@ -75,6 +79,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  In order to send a chat message, its <body> first has to be encrypted. The client MUST use fresh, randomly generated key/IV pairs with AES-128 in Galois/Counter Mode (GCM). For each intended recipient device, i.e. both own devices as well as devices associated with the contact, this key is encrypted using the corresponding long-standing axolotl session. Each encrypted payload key is tagged with the recipient device's ID. This is all serialized into a MessageElement.
+ 
+  The client may wish to transmit keying material to the contact. This first has to be generated. The client MUST generate a fresh, randomly generated key/IV pair. For each intended recipient device, i.e. both own devices as well as devices associated with the contact, this key is encrypted using the corresponding long-standing axolotl session. Each encrypted payload key is tagged with the recipient device's ID. This is all serialized into a KeyTransportElement, omitting the <payload> as follows:
  *
  * @param payload data encrypted with fresh AES-128 GCM key/iv pair. If nil this is equivalent to a KeyTransportElement.
  * @param jid recipient JID
@@ -82,66 +88,101 @@ NS_ASSUME_NONNULL_BEGIN
  * @param iv the IV used for encryption of payload
  * @param elementId XMPP element id. If nil a random UUID will be used.
  */
-- (void) sendPayload:(nullable NSData*)payload
-               toJID:(XMPPJID*)jid
-             keyData:(NSDictionary<NSNumber*,NSData*>*)keyData
+- (void) sendKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
                   iv:(NSData*)iv
+               toJID:(XMPPJID*)toJID
+             payload:(nullable NSData*)payload
            elementId:(nullable NSString*)elementId;
-
-/**
- The client may wish to transmit keying material to the contact. This first has to be generated. The client MUST generate a fresh, randomly generated key/IV pair. For each intended recipient device, i.e. both own devices as well as devices associated with the contact, this key is encrypted using the corresponding long-standing axolotl session. Each encrypted payload key is tagged with the recipient device's ID. This is all serialized into a KeyTransportElement, omitting the <payload> as follows:
- *
- * @param jid recipient JID
- * @param elementID XMPP element id
- * @param keyData payload's AES key encrypted to each recipient deviceId's Axolotl session
- * @param iv the IV used for encryption of payload
- */
-- (void) sendKeyToJID:(XMPPJID*)jid
-              keyData:(NSDictionary<NSNumber*,NSData*>*)keyData
-                   iv:(NSData*)iv
-            elementId:(nullable NSString*)elementId;
 
 @end
 
 @protocol OMEMODelegate <NSObject>
+@optional
+
+/** Callback for when your device list is successfully published */
+- (void)omemo:(OMEMOModule*)omemo
+publishedDeviceIds:(NSArray<NSNumber*>*)deviceIds
+   responseIq:(XMPPIQ*)responseIq
+   outgoingIq:(XMPPIQ*)outgoingIq;
+
+/** Callback for when your device list update fails. If errorIq is nil there was a timeout. */
+- (void)omemo:(OMEMOModule*)omemo
+failedToPublishDeviceIds:(NSArray<NSNumber*>*)deviceIds
+      errorIq:(nullable XMPPIQ*)errorIq
+   outgoingIq:(XMPPIQ*)outgoingIq;
+
 
 /**
  * In order to determine whether a given contact has devices that support OMEMO, the devicelist node in PEP is consulted. Devices MUST subscribe to 'urn:xmpp:omemo:0:devicelist' via PEP, so that they are informed whenever their contacts add a new device. They MUST cache the most up-to-date version of the devicelist.
  */
 - (void)omemo:(OMEMOModule*)omemo deviceListUpdate:(NSArray<NSNumber*>*)deviceIds fromJID:(XMPPJID*)fromJID message:(XMPPMessage*)message;
 
-/** 
+/** Callback for when your bundle is successfully published */
+- (void)omemo:(OMEMOModule*)omemo
+    publishedBundle:(OMEMOBundle*)bundle
+    responseIq:(XMPPIQ*)responseIq
+    outgoingIq:(XMPPIQ*)outgoingIq;
+
+/** Callback when publishing your bundle fails */
+- (void)omemo:(OMEMOModule*)omemo
+failedToPublishBundle:(OMEMOBundle*)bundle
+      errorIq:(nullable XMPPIQ*)errorIq
+   outgoingIq:(XMPPIQ*)outgoingIq;
+
+/**
  * Process the incoming OMEMO bundle somewhere in your application
  */
 - (void)omemo:(OMEMOModule*)omemo
-receivedBundle:(OMEMOBundle*)bundle
+fetchedBundle:(OMEMOBundle*)bundle
       fromJID:(XMPPJID*)fromJID
-           iq:(XMPPIQ*)iq;
+   responseIq:(XMPPIQ*)responseIq
+   outgoingIq:(XMPPIQ*)outgoingIq;
+
+/** Bundle fetch failed */
+- (void)omemo:(OMEMOBundle*)omemo
+failedToFetchBundleForDeviceId:(uint32_t)deviceId
+      fromJID:(XMPPJID*)fromJID
+      errorIq:(nullable XMPPIQ*)errorIq
+   outgoingIq:(XMPPIQ*)outgoingIq;
 
 /**
- * Incoming MessageElement payload, keyData, and IV */
+ * Incoming MessageElement payload, keyData, and IV. If no payload it's a KeyTransportElement
 - (void)omemo:(OMEMOModule*)omemo
-receivedPayload:(NSData*)payload
-      keyData:(NSDictionary<NSNumber*,NSData*>*)keyData
+failedToSendKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
            iv:(NSData*)iv
+      toJID:(XMPPJID*)toJID
+      payload:(nullable NSData*)payload
+ errorMessage:(nullable XMPPMessage*)errorMessage
+      outgoingMessage:(XMPPMessage*)outgoingMessage;
+ */
+
+/**
+ * Incoming MessageElement payload, keyData, and IV. If no payload it's a KeyTransportElement */
+- (void)omemo:(OMEMOModule*)omemo
+receivedKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
+           iv:(NSData*)iv
+      fromJID:(XMPPJID*)fromJID
+      payload:(nullable NSData*)payload
       message:(XMPPMessage*)message;
 
 @end
 
 @protocol OMEMOStorageDelegate <NSObject>
-@required;
+@required
 
-
+/** Return YES if successful. Optionally store a reference to parent module and moduleQueue */
 - (BOOL)configureWithParent:(OMEMOModule *)aParent queue:(dispatch_queue_t)queue;
 
+/** Store new deviceIds for a bare JID */
 - (void)storeDeviceIds:(NSArray<NSNumber*>*)deviceIds forJID:(XMPPJID*)jid;
 
+/** Fetch all deviceIds for a given bare JID. Return empty array if not found. */
 - (NSArray<NSNumber*>*)fetchDeviceIdsForJID:(XMPPJID*)jid;
 
-/** This should return your fully populated bundle with >= 100 prekeys */
-- (OMEMOBundle*)fetchMyBundle;
+/** This should return your fully populated bundle with >= 100 prekeys. Return nil if bundle is not found. */
+- (nullable OMEMOBundle*)fetchMyBundle;
 
-
+/** Return YES if SignalProtocol session has been established and is valid */
 - (BOOL) isSessionValid:(XMPPJID*)jid deviceId:(uint32_t)deviceId;
 
 @end
