@@ -26,11 +26,21 @@
 
 - (void)setUp {
     [super setUp];
+    
+// Comment this out to test legacy namespace
+#define OMEMOMODULE_XMLNS_OMEMO
+    
+#ifdef OMEMOMODULE_XMLNS_OMEMO
+    OMEMOModuleNamespace ns = OMEMOModuleNamespaceOMEMO;
+#else
+    OMEMOModuleNamespace ns = OMEMOModuleNamespaceConversationsLegacy;
+#endif
+    
     [DDLog addLogger:[DDTTYLogger sharedInstance]];
     OMEMOBundle *bundle = [self bundle];
     XMPPJID *myJID = [XMPPJID jidWithString:@"test@example.com"];
     OMEMOTestStorage *testStorage = [[OMEMOTestStorage alloc] initWithMyBundle:bundle];
-    _omemoModule = [[OMEMOModule alloc] initWithOMEMOStorage:testStorage];
+    _omemoModule = [[OMEMOModule alloc] initWithOMEMOStorage:testStorage xmlNamespace:ns];
     _mockStream = [[XMPPMockStream alloc] init];
     self.mockStream.myJID = myJID;
     [self.omemoModule activate:self.mockStream];
@@ -52,6 +62,7 @@
     
     XMPPJID *testJID = [XMPPJID jidWithString:@"test@example.com"];
     
+    OMEMOModuleNamespace ns = self.omemoModule.xmlNamespace;
     NSString *items = [NSString stringWithFormat:@" \
     <pubsub xmlns='http://jabber.org/protocol/pubsub'> \
     <items node='%@'> \
@@ -63,7 +74,7 @@
     </item> \
     </items> \
     </pubsub> \
-    ", XMLNS_OMEMO_DEVICELIST, XMLNS_OMEMO];
+                       ", [OMEMOModule xmlnsOMEMODeviceList:ns], [OMEMOModule xmlnsOMEMO:ns]];
     
     NSError *error = nil;
     NSXMLElement *pubsub = [[NSXMLElement alloc] initWithXMLString:items error:&error];
@@ -238,9 +249,11 @@
 }
 
 - (void) testReceiveMessage {
+    OMEMOModuleNamespace ns = self.omemoModule.xmlNamespace;
+
     NSString *incoming = [NSString stringWithFormat:@" \
     <message to=\"remote@jid.com\" id=\"6441EEB7-89E6-4D02-8899-BB0E3E1C0EB2\"><store xmlns=\"urn:xmpp:hints\"></store><encrypted xmlns=\"%@\"><header sid=\"31415\"><key rid=\"12321\">MTIzMjE=</key><key rid=\"31415\">MzE0MTU=</key><iv>aXY=</iv></header><payload>cGF5bG9hZA==</payload></encrypted></message> \
-    ", XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMO:ns]];
     
     self.expectation = [self expectationWithDescription:@"testReceiveMessage"];
     NSXMLElement *element = [[NSXMLElement alloc] initWithXMLString:incoming error:nil];
@@ -255,6 +268,8 @@
 }
 
 - (void) testDeviceListUpdate {
+    OMEMOModuleNamespace ns = self.omemoModule.xmlNamespace;
+
     NSString *incoming = [NSString stringWithFormat:@" \
     <message from='juliet@capulet.lit' \
     to='romeo@montague.lit' \
@@ -271,7 +286,7 @@
     </items> \
     </event> \
     </message> \
-    ", XMLNS_OMEMO_DEVICELIST, XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMODeviceList:ns], [OMEMOModule xmlnsOMEMO:ns]];
     NSXMLElement *element = [[NSXMLElement alloc] initWithXMLString:incoming error:nil];
     self.expectation = [self expectationWithDescription:@"testDeviceListUpdate"];
     XCTAssertNotNil(element);
@@ -290,7 +305,12 @@
 publishedDeviceIds:(NSArray<NSNumber*>*)deviceIds
    responseIq:(XMPPIQ*)responseIq
    outgoingIq:(XMPPIQ*)outgoingIq {
-    [self.expectation fulfill];
+    // This can be called by testFetchDeviceIds because it will
+    // update the device list
+    if (self.expectation) {
+        [self.expectation fulfill];
+        self.expectation = nil;
+    }
 }
 
 /** Callback for when your device list update fails. If errorIq is nil there was a timeout. */
@@ -342,6 +362,7 @@ failedToFetchBundleForDeviceId:(uint32_t)deviceId
 - (void)omemo:(OMEMOModule*)omemo
 receivedKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
            iv:(NSData*)iv
+senderDeviceId:(uint32_t)senderDeviceId
       fromJID:(XMPPJID*)fromJID
       payload:(nullable NSData*)payload
       message:(XMPPMessage*)message {
@@ -352,7 +373,10 @@ receivedKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
  * In order to determine whether a given contact has devices that support OMEMO, the devicelist node in PEP is consulted. Devices MUST subscribe to 'urn:xmpp:omemo:0:devicelist' via PEP, so that they are informed whenever their contacts add a new device. They MUST cache the most up-to-date version of the devicelist.
  */
 - (void)omemo:(OMEMOModule*)omemo deviceListUpdate:(NSArray<NSNumber*>*)deviceIds fromJID:(XMPPJID*)fromJID incomingElement:(NSXMLElement*)incomingElement {
-    [self.expectation fulfill];
+    if (self.expectation) {
+        [self.expectation fulfill];
+        self.expectation = nil;
+    }
 }
 
 #pragma mark Utility
@@ -397,6 +421,7 @@ receivedKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
 }
 
 - (NSXMLElement*)innerBundleElement {
+    OMEMOModuleNamespace ns = self.omemoModule.xmlNamespace;
     NSString *expectedString = [NSString stringWithFormat:@" \
     <pubsub xmlns='http://jabber.org/protocol/pubsub'> \
     <publish node='%@:31415'> \
@@ -414,14 +439,15 @@ receivedKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
     </item> \
     </publish> \
     </pubsub> \
-    ", XMLNS_OMEMO_BUNDLES, XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMOBundles:ns], [OMEMOModule xmlnsOMEMO:ns]];
     NSXMLElement *element = [[NSXMLElement alloc] initWithXMLString:expectedString error:nil];
     XCTAssertNotNil(element);
     return element;
 }
 
 - (OMEMOBundle*) bundle {
-    OMEMOBundle *bundle = [[self iq_SetBundleWithEid:@"announce1"] omemo_bundle];
+    OMEMOModuleNamespace ns = self.omemoModule.xmlNamespace;
+    OMEMOBundle *bundle = [[self iq_SetBundleWithEid:@"announce1"] omemo_bundle:ns];
     XCTAssertNotNil(bundle);
     return bundle;
 }
