@@ -365,6 +365,7 @@ s.source = { :git => 'https://github.com/robbiehanson/XMPPFramework.git', :branc
     ss.dependency 'XMPPFramework/BandwidthMonitor'
     ss.dependency 'XMPPFramework/CoreDataStorage'
     ss.dependency 'XMPPFramework/FileTransfer'
+    ss.dependency 'XMPPFramework/OMEMO'
     ss.dependency 'XMPPFramework/GoogleSharedStatus'
     ss.dependency 'XMPPFramework/OMEMO'
     ss.dependency 'XMPPFramework/ProcessOne'
