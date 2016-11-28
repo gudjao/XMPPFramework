@@ -836,7 +836,30 @@ enum XMPPRoomState
 		//     </invite>
 		//   </x>
 		// </message>
-		
+        
+        // Example 1. A direct invitation
+        //
+        // <message from='crone1@shakespeare.lit/desktop' to='hecate@shakespeare.lit'>
+        //   <x xmlns='jabber:x:conference'
+        //      jid='darkcave@macbeth.shakespeare.lit'
+        //      password='cauldronburn'
+        //      reason='Hey Hecate, this is the place for all good witches!'/>
+        // </message>
+        
+        // XEP-0249
+        /*
+        NSXMLElement *x = [NSXMLElement elementWithName:@"x" xmlns:@"jabber:x:conference"];
+        [x addAttributeWithName:@"jid" stringValue:[roomJID full]];
+        [x addAttributeWithName:@"reason" stringValue:inviteMessageStr];
+        
+        XMPPMessage *message = [XMPPMessage message];
+        [message addAttributeWithName:@"to" stringValue:[jid full]];
+        [message addChild:x];
+        
+        NSLog(@"DIRECT INV: %@", [message prettyXMLString]);
+        */
+        
+        // XEP-0045
 		NSXMLElement *invite = [NSXMLElement elementWithName:@"invite"];
 		[invite addAttributeWithName:@"to" stringValue:[jid full]];
 		
@@ -851,7 +874,7 @@ enum XMPPRoomState
 		XMPPMessage *message = [XMPPMessage message];
 		[message addAttributeWithName:@"to" stringValue:[roomJID full]];
 		[message addChild:x];
-		
+        
 		[xmppStream sendElement:message];
 		
 	}};
