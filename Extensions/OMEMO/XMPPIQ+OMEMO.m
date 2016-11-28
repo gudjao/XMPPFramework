@@ -20,13 +20,14 @@
     </iq>
  */
 + (XMPPIQ*) omemo_iqFetchDeviceIdsForJID:(XMPPJID*)jid
-                               elementId:(nullable NSString*)elementId {
+                               elementId:(nullable NSString*)elementId
+                            xmlNamespace:(OMEMOModuleNamespace)xmlNamespace {
     NSXMLElement *items = [NSXMLElement elementWithName:@"items"];
-    [items addAttributeWithName:@"node" stringValue:XMLNS_OMEMO_DEVICELIST];
+    [items addAttributeWithName:@"node" stringValue:[OMEMOModule xmlnsOMEMODeviceList:xmlNamespace]];
     NSXMLElement *pubsub = [NSXMLElement elementWithName:@"pubsub" xmlns:XMLNS_PUBSUB];
     [pubsub addChild:items];
     
-    XMPPIQ *iq = [XMPPIQ iqWithType:@"get" to:jid elementID:elementId];
+    XMPPIQ *iq = [XMPPIQ iqWithType:@"get" to:jid.bareJID elementID:elementId];
     [iq addChild:pubsub];
     return iq;
 }
@@ -47,8 +48,8 @@
       </pubsub>
     </iq>
  */
-+ (XMPPIQ*) omemo_iqPublishDeviceIds:(NSArray<NSNumber*>*)deviceIds elementId:(nullable NSString*)elementId {
-    NSXMLElement *listElement = [NSXMLElement elementWithName:@"list" xmlns:XMLNS_OMEMO];
++ (XMPPIQ*) omemo_iqPublishDeviceIds:(NSArray<NSNumber*>*)deviceIds elementId:(nullable NSString*)elementId xmlNamespace:(OMEMOModuleNamespace)xmlNamespace {
+    NSXMLElement *listElement = [NSXMLElement elementWithName:@"list" xmlns:[OMEMOModule xmlnsOMEMO:xmlNamespace]];
     [deviceIds enumerateObjectsUsingBlock:^(NSNumber * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         NSXMLElement *device = [NSXMLElement elementWithName:@"device"];
         [device addAttributeWithName:@"id" numberValue:obj];
@@ -59,7 +60,7 @@
     [item addChild:listElement];
     
     NSXMLElement *publish = [NSXMLElement elementWithName:@"publish"];
-    [publish addAttributeWithName:@"node" stringValue:XMLNS_OMEMO_DEVICELIST];
+    [publish addAttributeWithName:@"node" stringValue:[OMEMOModule xmlnsOMEMODeviceList:xmlNamespace]];
     [publish addChild:item];
     
     NSXMLElement *pubsub = [NSXMLElement elementWithName:@"pubsub" xmlns:XMLNS_PUBSUB];
@@ -107,7 +108,8 @@
  
  */
 + (XMPPIQ*) omemo_iqPublishBundle:(OMEMOBundle*)bundle
-                 elementId:(nullable NSString*)elementId {
+                 elementId:(nullable NSString*)elementId
+                     xmlNamespace:(OMEMOModuleNamespace)xmlNamespace {
     NSXMLElement *signedPreKeyElement = nil;
     if (bundle.signedPreKey.publicKey) {
         signedPreKeyElement = [NSXMLElement elementWithName:@"signedPreKeyPublic" stringValue:[bundle.signedPreKey.publicKey base64EncodedStringWithOptions:0]];
@@ -127,7 +129,7 @@
         [preKeyElement addAttributeWithName:@"preKeyId" unsignedIntegerValue:preKey.preKeyId];
         [preKeysElement addChild:preKeyElement];
     }];
-    NSXMLElement *bundleElement = [XMPPElement elementWithName:@"bundle" xmlns:XMLNS_OMEMO];
+    NSXMLElement *bundleElement = [XMPPElement elementWithName:@"bundle" xmlns:[OMEMOModule xmlnsOMEMO:xmlNamespace]];
     if (signedPreKeyElement) {
         [bundleElement addChild:signedPreKeyElement];
     }
@@ -142,7 +144,7 @@
     [itemElement addChild:bundleElement];
     
     NSXMLElement *publish = [NSXMLElement elementWithName:@"publish"];
-    NSString *nodeName = [NSString stringWithFormat:@"%@:%d",XMLNS_OMEMO_BUNDLES,(int)bundle.deviceId];
+    NSString *nodeName = [OMEMOModule xmlnsOMEMOBundles:xmlNamespace deviceId:bundle.deviceId];
     [publish addAttributeWithName:@"node" stringValue:nodeName];
     [publish addChild:itemElement];
     
@@ -167,6 +169,17 @@
     return iq;
 }
 
++ (XMPPIQ *) omemo_iqDeleteNode:(NSString *)node elementId:(nullable NSString *)elementId {
+    XMPPIQ *iq = [XMPPIQ iqWithType:@"set" elementID:elementId];
+    NSXMLElement *pubsub = [NSXMLElement elementWithName:@"pubsub" xmlns:XMLNS_PUBSUB];
+    NSXMLElement *deleteElement = [NSXMLElement elementWithName:@"delete"];
+    [deleteElement addAttributeWithName:@"node" stringValue:node];
+    
+    [pubsub addChild:deleteElement];
+    [iq addChild:pubsub];
+    
+    return iq;
+}
 /**
  * iq stanza for fetching remote bundle
  
@@ -182,13 +195,22 @@
  */
 + (XMPPIQ*) omemo_iqFetchBundleForDeviceId:(uint32_t)deviceId
                                        jid:(XMPPJID*)jid
-                                 elementId:(nullable NSString*)elementId {
-    NSString *nodeName = [NSString stringWithFormat:@"%@:%d",XMLNS_OMEMO_BUNDLES,(int)deviceId];
+                                 elementId:(nullable NSString*)elementId
+                              xmlNamespace:(OMEMOModuleNamespace)xmlNamespace {
+    NSString *nodeName = [OMEMOModule xmlnsOMEMOBundles:xmlNamespace deviceId:deviceId];
     return [self omemo_iqFetchNode:nodeName to:jid elementId:elementId];
 }
 
++ (XMPPIQ*) omemo_iqRemoveBundleForDeviceId:(uint32_t)deviceId
+                                  elementId:(nullable NSString*)elementId
+                               xmlNamespace:(OMEMOModuleNamespace)xmlNamespace
+{
+    NSString *nodeName = [OMEMOModule xmlnsOMEMOBundles:xmlNamespace deviceId:deviceId];
+    return [self omemo_iqDeleteNode:nodeName elementId:elementId];
+}
 
-- (nullable OMEMOBundle*) omemo_bundle {
+
+- (nullable OMEMOBundle*) omemo_bundle:(OMEMOModuleNamespace)ns {
     NSXMLElement *pubsub = [self elementForName:@"pubsub" xmlns:XMLNS_PUBSUB];
     if (!pubsub) { return nil; }
     NSXMLElement *items = [pubsub elementForName:@"items"];
@@ -199,32 +221,32 @@
     if (!items) { return nil; }
     NSString *node = [items attributeForName:@"node"].stringValue;
     if (!node) { return nil; }
-    if (![node containsString:XMLNS_OMEMO_BUNDLES]) {
+    if (![node containsString:[OMEMOModule xmlnsOMEMOBundles:ns]]) {
         return nil;
     }
-    NSString *separator = [XMLNS_OMEMO_BUNDLES stringByAppendingString:@":"];
+    NSString *separator = [[OMEMOModule xmlnsOMEMOBundles:ns] stringByAppendingString:@":"];
     NSArray<NSString*> *components = [node componentsSeparatedByString:separator];
     NSString *deviceIdString = [components lastObject];
     uint32_t deviceId = (uint32_t)[deviceIdString integerValue];
     
     NSXMLElement *itemElement = [items elementForName:@"item"];
     if (!itemElement) { return nil; }
-    NSXMLElement *bundleElement = [itemElement elementForName:@"bundle" xmlns:XMLNS_OMEMO];
+    NSXMLElement *bundleElement = [itemElement elementForName:@"bundle" xmlns:[OMEMOModule xmlnsOMEMO:ns]];
     if (!bundleElement) { return nil; }
     NSXMLElement *signedPreKeyElement = [bundleElement elementForName:@"signedPreKeyPublic"];
     if (!signedPreKeyElement) { return nil; }
     uint32_t signedPreKeyId = [signedPreKeyElement attributeUInt32ValueForName:@"signedPreKeyId"];
     NSString *signedPreKeyPublicBase64 = [signedPreKeyElement stringValue];
     if (!signedPreKeyPublicBase64) { return nil; }
-    NSData *signedPreKeyPublic = [[NSData alloc] initWithBase64EncodedString:signedPreKeyPublicBase64 options:0];
+    NSData *signedPreKeyPublic = [[NSData alloc] initWithBase64EncodedString:signedPreKeyPublicBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
     if (!signedPreKeyPublic) { return nil; }
     NSString *signedPreKeySignatureBase64 = [[bundleElement elementForName:@"signedPreKeySignature"] stringValue];
     if (!signedPreKeySignatureBase64) { return nil; }
-    NSData *signedPreKeySignature = [[NSData alloc] initWithBase64EncodedString:signedPreKeySignatureBase64 options:0];
+    NSData *signedPreKeySignature = [[NSData alloc] initWithBase64EncodedString:signedPreKeySignatureBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
     if (!signedPreKeySignature) { return nil; }
     NSString *identityKeyBase64 = [[bundleElement elementForName:@"identityKey"] stringValue];
     if (!identityKeyBase64) { return nil; }
-    NSData *identityKey = [[NSData alloc] initWithBase64EncodedString:identityKeyBase64 options:0];
+    NSData *identityKey = [[NSData alloc] initWithBase64EncodedString:identityKeyBase64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
     if (!identityKey) { return nil; }
     NSXMLElement *preKeysElement = [bundleElement elementForName:@"prekeys"];
     if (!preKeysElement) { return nil; }
@@ -235,7 +257,7 @@
         NSString *b64 = [obj stringValue];
         NSData *data = nil;
         if (b64) {
-            data = [[NSData alloc] initWithBase64EncodedString:b64 options:0];
+            data = [[NSData alloc] initWithBase64EncodedString:b64 options:NSDataBase64DecodingIgnoreUnknownCharacters];
         }
         if (data) {
             OMEMOPreKey *preKey = [[OMEMOPreKey alloc] initWithPreKeyId:preKeyId publicKey:data];

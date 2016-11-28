@@ -11,7 +11,6 @@
 
 
 #import <Foundation/Foundation.h>
-#import <UIKit/UIKit.h>
 
 #if TARGET_OS_IPHONE
     #import <UIKit/UIKit.h>

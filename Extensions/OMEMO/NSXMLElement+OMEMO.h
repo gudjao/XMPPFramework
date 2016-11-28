@@ -8,22 +8,23 @@
 
 #import <Foundation/Foundation.h>
 #import "NSXMLElement+XMPP.h"
+#import "OMEMOModule.h"
 
 NS_ASSUME_NONNULL_BEGIN
 @interface NSXMLElement (OMEMO)
 
 /** If element contains <encrypted xmlns='urn:xmpp:omemo:0'> */
-- (BOOL) omemo_hasEncryptedElement;
+- (BOOL) omemo_hasEncryptedElement:(OMEMOModuleNamespace)ns;
 /** If element IS <encrypted xmlns='urn:xmpp:omemo:0'> */
-- (BOOL) omemo_isEncryptedElement;
+- (BOOL) omemo_isEncryptedElement:(OMEMOModuleNamespace)ns;
 /** Child element <encrypted xmlns='urn:xmpp:omemo:0'> */
-- (nullable NSXMLElement*) omemo_encryptedElement;
+- (nullable NSXMLElement*) omemo_encryptedElement:(OMEMOModuleNamespace)ns;
 
 
 /** The Device ID is a randomly generated integer between 1 and 2^31 - 1. If zero it means the element was not found. Only works within <encrypted> element. <header sid='27183'> */
 - (uint32_t) omemo_senderDeviceId;
 /** key data is keyed to receiver deviceIds. Only works within <encrypted> element.  <key rid='31415'>BASE64ENCODED...</key> .. */
-- (nullable NSDictionary<NSNumber*,NSData*>*) omemo_keyData;
+- (nullable NSArray<OMEMOKeyData*>*) omemo_keyData;
 /** Only works within <encrypted> element. <payload>BASE64ENCODED</payload> */
 - (nullable NSData*) omemo_payload;
 /** Encryption IV. Only works within <encrypted> element. <iv>BASE64ENCODED</iv> */
@@ -43,13 +44,16 @@ NS_ASSUME_NONNULL_BEGIN
  </encrypted>
  */
 
-+ (NSXMLElement*) omemo_keyTransportElementWithKeyData:(NSDictionary<NSNumber*,NSData*>*)keyData
++ (NSXMLElement*) omemo_keyTransportElementWithKeyData:(NSArray<OMEMOKeyData*>*)keyData
                                                     iv:(NSData*)iv
-                                        senderDeviceId:(uint32_t)senderDeviceId;
+                                        senderDeviceId:(uint32_t)senderDeviceId
+                                          xmlNamespace:(OMEMOModuleNamespace)xmlNamespace;
 
 
 /** Extracts device list from PEP <items> element */
-- (nullable NSArray<NSNumber *>*)omemo_deviceListFromItems;
+- (nullable NSArray<NSNumber *>*)omemo_deviceListFromItems:(OMEMOModuleNamespace)ns;
+/** Extracts device list from PEP iq respnse */
+- (nullable NSArray<NSNumber *>*)omemo_deviceListFromIqResponse:(OMEMOModuleNamespace)ns;
 
 
 @end

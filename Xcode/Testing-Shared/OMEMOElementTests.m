@@ -15,13 +15,21 @@
 
 
 @interface OMEMOElementTests : XCTestCase
-
+@property (nonatomic, readonly) OMEMOModuleNamespace ns;
 @end
 
 @implementation OMEMOElementTests
 
 - (void)setUp {
     [super setUp];
+    // Comment this out to test legacy namespace
+#define OMEMOMODULE_XMLNS_OMEMO
+    
+#ifdef OMEMOMODULE_XMLNS_OMEMO
+    _ns = OMEMOModuleNamespaceOMEMO;
+#else
+    _ns = OMEMOModuleNamespaceConversationsLegacy;
+#endif
     // Put setup code here. This method is called before the invocation of each test method in the class.
 }
 
@@ -32,7 +40,7 @@
 
 - (void)testDeviceIdSerialization {
     NSArray *deviceIds = @[@(12345), @(4223), @(31415)];
-    XMPPIQ *iq = [XMPPIQ omemo_iqPublishDeviceIds:deviceIds elementId:@"announce1"];
+    XMPPIQ *iq = [XMPPIQ omemo_iqPublishDeviceIds:deviceIds elementId:@"announce1" xmlNamespace:self.ns];
     NSString *iqString = [iq XMLString];
     NSString *expectedString = [NSString stringWithFormat:@" \
     <iq type='set' id='announce1'> \
@@ -48,7 +56,7 @@
     </publish> \
     </pubsub> \
     </iq> \
-    ", XMLNS_OMEMO_DEVICELIST, XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMODeviceList:self.ns], [OMEMOModule xmlnsOMEMO:self.ns]];
     NSError *error = nil;
     NSXMLElement *outputIQ = [[NSXMLElement alloc] initWithXMLString:iqString error:&error];
     XCTAssertNil(error);
@@ -78,7 +86,7 @@
     </publish> \
     </pubsub> \
     </iq> \
-    ", XMLNS_OMEMO_BUNDLES, XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMOBundles:self.ns], [OMEMOModule xmlnsOMEMO:self.ns]];
     NSError *error = nil;
     NSXMLElement *expectedXML = [[NSXMLElement alloc] initWithXMLString:expectedString error:&error];
     XCTAssertNotNil(expectedXML);
@@ -101,7 +109,7 @@
                         ];
     OMEMOSignedPreKey *signedPreKey = [[OMEMOSignedPreKey alloc] initWithPreKeyId:1 publicKey:signedPreKeyPublicData signature:signedPreKeySignatureData];
     OMEMOBundle *bundle = [[OMEMOBundle alloc] initWithDeviceId:31415 identityKey:identityKeyData signedPreKey:signedPreKey preKeys:preKeys];
-    XMPPIQ *iq = [XMPPIQ omemo_iqPublishBundle:bundle elementId:@"announce2"];
+    XMPPIQ *iq = [XMPPIQ omemo_iqPublishBundle:bundle elementId:@"announce2" xmlNamespace:self.ns];
     XCTAssertEqualObjects([iq XMLStringWithOptions:DDXMLNodePrettyPrint], [expectedXML XMLStringWithOptions:DDXMLNodePrettyPrint]);
 }
 
@@ -126,12 +134,12 @@
     <items node='%@:31415'/> \
     </pubsub> \
     </iq> \
-    ", XMLNS_OMEMO_BUNDLES];
+    ", [OMEMOModule xmlnsOMEMOBundles:self.ns]];
     NSError *error = nil;
     NSXMLElement *expectedElement = [[NSXMLElement alloc] initWithXMLString:expected error:&error];
     XCTAssertNil(error);
     XCTAssertNotNil(expectedElement);
-    XMPPIQ *iq = [XMPPIQ omemo_iqFetchBundleForDeviceId:31415 jid:[XMPPJID jidWithString:@"juliet@capulet.lit"] elementId:@"fetch1"];
+    XMPPIQ *iq = [XMPPIQ omemo_iqFetchBundleForDeviceId:31415 jid:[XMPPJID jidWithString:@"juliet@capulet.lit"] elementId:@"fetch1" xmlNamespace:self.ns];
     XCTAssertEqualObjects([iq XMLStringWithOptions:DDXMLNodePrettyPrint], [expectedElement XMLStringWithOptions:DDXMLNodePrettyPrint]);
 }
 
@@ -154,7 +162,7 @@
     <iv>aXY=</iv> \
     </header> \
     </encrypted> \
-    ", XMLNS_OMEMO];
+    ", [OMEMOModule xmlnsOMEMO:self.ns]];
     NSXMLElement *expectedElement = [[NSXMLElement alloc] initWithXMLString:expected error:nil];
     XCTAssertNotNil(expectedElement);
     NSString *key1 = @"MzE0MTU=";
@@ -163,20 +171,26 @@
     NSData *keyData1 = [[NSData alloc] initWithBase64EncodedString:key1 options:0];
     NSData *keyData2 = [[NSData alloc] initWithBase64EncodedString:key2 options:0];
     NSData *ivData = [[NSData alloc] initWithBase64EncodedString:iv options:0];
-    NSDictionary *keyData = @{@(31415): keyData1,
-                              @(12321): keyData2};
+    NSArray<OMEMOKeyData*> *keyData = @[[[OMEMOKeyData alloc] initWithDeviceId:31415 data:keyData1],
+                         [[OMEMOKeyData alloc] initWithDeviceId:12321 data:keyData2]];
     uint32_t senderDeviceId = 27183;
-    NSXMLElement *testElement = [NSXMLElement omemo_keyTransportElementWithKeyData:keyData iv:ivData senderDeviceId:senderDeviceId];
+    NSXMLElement *testElement = [NSXMLElement omemo_keyTransportElementWithKeyData:keyData iv:ivData senderDeviceId:senderDeviceId xmlNamespace:self.ns];
     
-    XCTAssertTrue([expectedElement omemo_isEncryptedElement]);
-    XCTAssertTrue([testElement omemo_isEncryptedElement]);
+    XCTAssertTrue([expectedElement omemo_isEncryptedElement:self.ns]);
+    XCTAssertTrue([testElement omemo_isEncryptedElement:self.ns]);
     
     XCTAssertTrue(senderDeviceId == [expectedElement omemo_senderDeviceId]);
     XCTAssertTrue(senderDeviceId == [testElement omemo_senderDeviceId]);
     
-    XCTAssertEqualObjects(keyData, [expectedElement omemo_keyData]);
-    XCTAssertEqualObjects(keyData, [testElement omemo_keyData]);
-    
+    NSArray<OMEMOKeyData*> *expectedElementKeyData = [expectedElement omemo_keyData];
+    NSArray<OMEMOKeyData*> *testElementKeyData = [testElement omemo_keyData];
+    [keyData enumerateObjectsUsingBlock:^(OMEMOKeyData * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        XCTAssertEqualObjects(obj.data, expectedElementKeyData[idx].data);
+        XCTAssertEqual(obj.deviceId, expectedElementKeyData[idx].deviceId);
+        XCTAssertEqualObjects(obj.data, testElementKeyData[idx].data);
+        XCTAssertEqual(obj.deviceId, testElementKeyData[idx].deviceId);
+    }];
+
     XCTAssertNil([expectedElement omemo_payload]);
     XCTAssertNil([testElement omemo_payload]);
     
@@ -237,7 +251,7 @@
     </publish> \
     </pubsub> \
     </iq> \
-    ",XMLNS_OMEMO_BUNDLES, XMLNS_OMEMO];
+    ",[OMEMOModule xmlnsOMEMOBundles:self.ns], [OMEMOModule xmlnsOMEMO:self.ns]];
     NSError *error = nil;
     NSXMLElement *expectedXML = [[NSXMLElement alloc] initWithXMLString:expectedString error:&error];
     XCTAssertNotNil(expectedXML);
@@ -260,14 +274,14 @@
                                         ];
     OMEMOSignedPreKey *signedPreKey = [[OMEMOSignedPreKey alloc] initWithPreKeyId:1 publicKey:signedPreKeyPublicData signature:signedPreKeySignatureData];
     OMEMOBundle *bundle = [[OMEMOBundle alloc] initWithDeviceId:31415 identityKey:identityKeyData signedPreKey:signedPreKey preKeys:preKeys];
-    XMPPIQ *iq = [XMPPIQ omemo_iqPublishBundle:bundle elementId:@"announce2"];
+    XMPPIQ *iq = [XMPPIQ omemo_iqPublishBundle:bundle elementId:@"announce2" xmlNamespace:self.ns];
     XCTAssertEqualObjects([iq XMLStringWithOptions:DDXMLNodePrettyPrint], [expectedXML XMLStringWithOptions:DDXMLNodePrettyPrint]);
     
-    OMEMOBundle *expectedBundle = [[XMPPIQ iqFromElement:expectedXML] omemo_bundle];
-    OMEMOBundle *bundle2 = [iq omemo_bundle];
+    OMEMOBundle *expectedBundle = [[XMPPIQ iqFromElement:expectedXML] omemo_bundle:self.ns];
+    OMEMOBundle *bundle2 = [iq omemo_bundle:self.ns];
     
-    XMPPIQ *expectedIQ = [XMPPIQ omemo_iqPublishBundle:expectedBundle elementId:@"eid"];
-    XMPPIQ *bundle2iq = [XMPPIQ omemo_iqPublishBundle:bundle2 elementId:@"eid"];
+    XMPPIQ *expectedIQ = [XMPPIQ omemo_iqPublishBundle:expectedBundle elementId:@"eid" xmlNamespace:self.ns];
+    XMPPIQ *bundle2iq = [XMPPIQ omemo_iqPublishBundle:bundle2 elementId:@"eid" xmlNamespace:self.ns];
     
     XCTAssertEqualObjects([expectedIQ XMLStringWithOptions:DDXMLNodePrettyPrint], [bundle2iq XMLStringWithOptions:DDXMLNodePrettyPrint]);
 }
@@ -279,13 +293,13 @@
     <items node='%@'/> \
     </pubsub> \
     </iq> \
-    ",XMLNS_OMEMO_DEVICELIST];
+    ",[OMEMOModule xmlnsOMEMODeviceList:self.ns]];
     NSError *error = nil;
     NSXMLElement *expXml = [[NSXMLElement alloc] initWithXMLString:expected error:&error];
     XCTAssertNil(error);
     XCTAssertNotNil(expXml);
     XMPPJID *jid = [XMPPJID jidWithString:@"juliet@capulet.lit"];
-    XMPPIQ *iq = [XMPPIQ omemo_iqFetchDeviceIdsForJID:jid elementId:@"fetch1"];
+    XMPPIQ *iq = [XMPPIQ omemo_iqFetchDeviceIdsForJID:jid elementId:@"fetch1" xmlNamespace:self.ns];
     XMPPIQ *expIq = [XMPPIQ iqFromElement:expXml];
     XCTAssertEqualObjects([expIq type], [iq type]);
     XCTAssertEqualObjects([expIq to], [iq to]);
@@ -293,6 +307,22 @@
     NSXMLElement *pubsub = [iq elementForName:@"pubsub" xmlns:XMLNS_PUBSUB];
     NSXMLElement *expPubsub = [expIq elementForName:@"pubsub" xmlns:XMLNS_PUBSUB];
     XCTAssertEqualObjects(pubsub.prettyXMLString, expPubsub.prettyXMLString);
+}
+
+- (void) testRemoveDeviceBundle {
+    uint32_t deviceId = 123;
+    NSString *elementId = @"delete1";
+    NSString *expected = [NSString stringWithFormat:@"<iq type=\'set\' \
+                          id='%@'> \
+                          <pubsub xmlns='http://jabber.org/protocol/pubsub'> \
+                          <delete node='%@'/> \
+                          </pubsub> \
+                          </iq>",elementId,[OMEMOModule xmlnsOMEMOBundles:self.ns deviceId:deviceId]];
+    NSError *error = nil;
+    NSXMLElement *expXml = [[NSXMLElement alloc] initWithXMLString:expected error:&error];
+    XCTAssertNil(error);
+    XMPPIQ *iq = [XMPPIQ omemo_iqRemoveBundleForDeviceId:deviceId elementId:elementId xmlNamespace:self.ns];
+    XCTAssertEqualObjects(iq.prettyXMLString, expXml.prettyXMLString);
 }
 
 @end
